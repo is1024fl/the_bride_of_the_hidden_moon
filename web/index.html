@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>隱月的新娘</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <div id="main">
+      <div id="frame">
+        <!-- 控制按鈕 -->
+        <div class="controls">
+          <button class="icon-btn" id="bgmBtn" aria-label="靜音">♪</button>
+          <button
+            class="icon-btn"
+            id="restartBtn"
+            aria-label="重新開始"
+            style="display: none"
+          >
+            ↺
+          </button>
+        </div>
+
+        <!-- 初始頁面 -->
+        <section class="screen center on" id="sc-cover">
+          <h1 class="cover-title">隱月的新娘</h1>
+          <button class="btn" id="startBtn">進入怪談</button>
+          <button class="btn-ghost" id="galleryBtn" style="margin-top: 18px">
+            結局圖鑑
+          </button>
+        </section>
+
+        <!-- 遊戲主畫面 -->
+        <section class="screen" id="sc-intro">
+          <div class="narration">
+            <p class="dialog" id="introText"></p>
+            <div class="choices" id="choices"></div>
+          </div>
+          <p class="tap-hint" id="introHint">— 點擊繼續 —</p>
+        </section>
+
+        <!-- 結局畫面 -->
+        <section class="screen center" id="sc-ending">
+          <p class="ending-label" id="endingLabel">結局</p>
+          <h2 class="ending-title" id="endingTitle"></h2>
+          <p class="ending-desc" id="endingDesc"></p>
+          <div class="ending-actions">
+            <button class="btn" id="endingReplayBtn">回到開頭</button>
+            <button class="btn-ghost" id="endingGalleryBtn">
+              查看結局圖鑑
+            </button>
+          </div>
+        </section>
+
+        <!-- 結局圖鑑 -->
+        <section class="screen" id="sc-gallery">
+          <h2 class="gallery-title">結局圖鑑</h2>
+          <p class="gallery-count" id="galleryCount"></p>
+          <div class="gallery-grid" id="galleryGrid"></div>
+          <button
+            class="btn-ghost"
+            id="galleryBackBtn"
+            style="margin-top: 24px"
+          >
+            返回
+          </button>
+        </section>
+
+        <!-- 新結局解鎖提示 -->
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+    <a href="https://breakingcopyright.com/song/audionautix-horror-music"
+      >Horror Music</a
+    >
+    by Audionautix | Creative Commons (BY 4.0) |
+    <a href="https://creativecommons.org/licenses/by/4.0/">License</a>
+    <audio id="bgm" src="./assets/music.mp3" loop autoplay></audio>
+    <script src="index.js"></script>
+  </body>
+</html>

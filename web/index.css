@@ -1,0 +1,333 @@
+@font-face {
+  font-family: "ZhaohuaTypewriter";
+  src: url("./fonts/ZhaohuaTypeWriter.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* 確保字體載入前，網頁文字不會隱形 */
+}
+
+:root {
+  --background: #0a0908;
+  --dialog-box: #433f3b;
+  --text: #f0eee9;
+  --text-dim: #d6d2cc;
+  --fade: cubic-bezier(0.4, 0, 0.2, 1);
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: "ZhaohuaTypewriter", serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 手機滿版、平板/桌機置中成手機比例 ----------- */
+#main {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+}
+
+#frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: min(100vw, calc(100vh * 909 / 2044)); /* 鎖手機 909:2044 直幅 */
+  max-height: 100vh;
+  overflow: hidden;
+  background: var(--background);
+}
+
+audio {
+  display: none;
+}
+
+/* 場景：每個 screen 疊在 frame 上 ------------------------------------------ */
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: max(5vh, 28px) 26px max(6vh, 34px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.9s var(--fade);
+}
+.screen.on {
+  opacity: 1;
+  visibility: visible;
+}
+.screen.center {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* ---- 音訊 / 重玩控制 ---- */
+.controls {
+  position: sticky;
+  top: 16px;
+  margin-left: auto;
+  width: fit-content;
+  z-index: 60;
+  display: f/slex;
+  gap: 10px;
+}
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--text-dim);
+  background: var(--background);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.icon-btn:hover {
+  color: var(--text-dim);
+  border-color: var(--text-dim);
+}
+
+.fade-up {
+  animation: fadeUp 1s var(--fade) both;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
+  .screen {
+    transition: opacity 0.2s linear;
+  }
+}
+
+/* ---- 按鈕（選項 / 行動） ---- */
+.btn {
+  font-family: inherit;
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--text-dim);
+  padding: 15px 30px;
+  cursor: pointer;
+  transition: all 0.35s var(--fade);
+  position: relative;
+}
+.btn:hover,
+.btn:focus-visible {
+  border-color: var(--text-dim);
+  color: #fff;
+  background: var(--background);
+  outline: none;
+  letter-spacing: 0.24em;
+}
+.btn-ghost {
+  border-color: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-ghost:hover {
+  color: var(--text);
+  background: transparent;
+}
+
+/* ---- 封面 ---- */
+.cover-title {
+  text-orientation: upright;
+  writing-mode: vertical-rl;
+  font-weight: 900;
+  font-size: clamp(48px, 10vh, 56px);
+  letter-spacing: 0.12em;
+  line-height: 1.05;
+  color: var(--text);
+  height: auto;
+  margin: 8px 0 34px;
+}
+
+/* ---- 旁白 / 打字機 ---- */
+.narration {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: left;
+}
+
+.dialog {
+  color: var(--text);
+  letter-spacing: 0.04em;
+  min-height: 1em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.8);
+}
+.dialog .cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.1em;
+  vertical-align: -0.16em;
+  background: var(--text-dim);
+  margin-left: 2px;
+  animation: blbackground 1s steps(1) infinite;
+}
+@keyframes blbackground {
+  50% {
+    opacity: 0;
+  }
+}
+.tap-hint {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--text-dim);
+  margin-top: 18px;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.tap-hint.show {
+  opacity: 0.55;
+  animation: hintpulse 2.4s ease-in-out infinite;
+}
+@keyframes hintpulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ---- 選項按鈕 ---- */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 22px;
+  opacity: 0;
+  transition: opacity 0.5s var(--fade);
+}
+.choices.show {
+  opacity: 1;
+}
+.choices .btn {
+  text-align: left;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  padding: 14px 20px;
+}
+
+/* ---- 結局畫面 ---- */
+.ending-label {
+  font-size: 12px;
+  letter-spacing: 0.5em;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+.ending-title {
+  font-size: clamp(28px, 8vw, 40px);
+  letter-spacing: 0.14em;
+  margin-bottom: 20px;
+}
+.ending-desc {
+  font-size: 15px;
+  line-height: 2;
+  color: var(--text-dim);
+  max-width: 32em;
+  margin-bottom: 40px;
+}
+.ending-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+/* ---- 結局圖鑑 ---- */
+.gallery-title {
+  font-size: 22px;
+  letter-spacing: 0.2em;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.gallery-count {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 26px;
+}
+.gallery-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.ending-card {
+  border: 1px solid var(--dialog-box);
+  padding: 16px 18px;
+}
+.ending-card .name {
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.ending-card .desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.ending-card.locked .name {
+  color: var(--text-dim);
+}
+.ending-card.locked .desc {
+  color: #6b6862;
+}
+
+/* ---- 新結局提示 toast ---- */
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 8vh;
+  transform: translate(-50%, 20px);
+  background: var(--dialog-box);
+  color: var(--text);
+  padding: 12px 22px;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  z-index: 70;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.5s var(--fade);
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
