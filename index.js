@@ -50,26 +50,79 @@ $("bgmBtn").addEventListener("click", () => {
   $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
 });
 
-// 打字機：回傳 Promise；點擊可跳過
-function typewriter(el, text, speed = 55) {
+// 把 *粗體* 語法轉成「每個字要不要套粗體」的清單，星號本身不會被打出來
+function parseInlineMarkup(text) {
+  const tokens = [];
+  let bold = false;
+  for (const ch of text) {
+    if (ch === "*") {
+      bold = !bold; // 星號只用來切換狀態，不進入輸出內容
+      continue;
+    }
+    tokens.push({ ch, bold });
+  }
+  return tokens;
+}
+
+
+// 打字機：回傳 Promise；點擊可跳過；支援 *文字* 顯示為粗體
+function typewriter(el, rawText, speed = 55) {
   return new Promise((res) => {
     typing = true;
     skip = false;
     el.innerHTML = "";
+ 
+    const tokens = parseInlineMarkup(rawText);
     let i = 0;
+    let boldEl = null; // 目前正在輸出的粗體區塊（沒有就是 null，代表輸出到最外層）
+ 
     const cur = document.createElement("span");
     cur.className = "cursor";
     el.appendChild(cur);
+ 
+    const appendChar = (ch, bold) => {
+      if (bold) {
+        if (!boldEl) {
+          boldEl = document.createElement("strong");
+          boldEl.className = "tw-bold";
+          el.insertBefore(boldEl, cur);
+        }
+        boldEl.appendChild(document.createTextNode(ch));
+      } else {
+        boldEl = null;
+        el.insertBefore(document.createTextNode(ch), cur);
+      }
+    };
+ 
+    // 跳過動畫時，一次把全部文字（含粗體格式）畫出來，不是純文字
+    const revealAll = () => {
+      el.innerHTML = "";
+      let wrap = null;
+      tokens.forEach(({ ch, bold }) => {
+        if (bold) {
+          if (!wrap) {
+            wrap = document.createElement("strong");
+            wrap.className = "tw-bold";
+            el.appendChild(wrap);
+          }
+          wrap.appendChild(document.createTextNode(ch));
+        } else {
+          wrap = null;
+          el.appendChild(document.createTextNode(ch));
+        }
+      });
+      el.appendChild(cur);
+    };
+ 
     const step = () => {
       if (skip) {
-        el.textContent = text;
-        el.appendChild(cur);
+        revealAll();
         finish();
         return;
       }
-      if (i < text.length) {
-        const ch = text[i++];
-        cur.insertAdjacentText("beforebegin", ch);
+      if (i < tokens.length) {
+        const { ch, bold } = tokens[i++];
+        appendChar(ch, bold);
         setTimeout(
           step,
           ch === "，" || ch === "。" || ch === "——" ? speed * 6 : speed,
@@ -84,6 +137,7 @@ function typewriter(el, text, speed = 55) {
     step();
   });
 }
+
 
 /*
 =========================================================================

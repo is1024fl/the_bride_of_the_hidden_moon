@@ -204,6 +204,13 @@ audio {
     opacity: 0;
   }
 }
+
+.dialog .tw-bold {
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+
 .tap-hint {
   text-align: center;
   font-size: 11px;
