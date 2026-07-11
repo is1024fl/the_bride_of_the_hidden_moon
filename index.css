@@ -1,6 +1,6 @@
 @font-face {
   font-family: "ZhaohuaTypewriter";
-  src: url("./fonts/ZhaohuaTypeWriter.woff2") format("woff2");
+  src: url("./assets/fonts/ZhaohuaTypeWriter.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap; /* 確保字體載入前，網頁文字不會隱形 */
