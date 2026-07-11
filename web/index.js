@@ -16,7 +16,14 @@ let skip = false,
   typing = false;
 let sessionId = null;
 let currentNode = null;
+let loading = false;
+let requestToken = 0;
 const $ = (id) => document.getElementById(id);
+
+const EFFECT_MAP = {
+  dim: { target: "frame", className: "fx-dim" },
+  "ghost-font": { target: "dialog", className: "fx-ghost-font" },
+};
 
 /*
 =========================================================================
@@ -89,6 +96,7 @@ function show(name) {
   screens.forEach((s) => $("sc-" + s).classList.remove("on"));
   $("sc-" + name).classList.add("on");
   $("restartBtn").style.display = name === "cover" ? "none" : "flex";
+  if (name !== "intro") applyEffects([]); // 離開遊戲畫面時清掉殘留效果
 }
 
 // 開始新的一局
@@ -108,6 +116,10 @@ async function beginGame() {
 
 // 讀取單一節點並播放
 async function loadNode(nodeId) {
+  if (loading) return; // 上一格還在讀取中，忽略這次點擊，避免重複觸發
+  loading = true;
+  const myToken = ++requestToken; // 這次請求的序號，用來辨識「是不是最新這次點擊」
+
   $("choices").innerHTML = "";
   $("choices").classList.remove("show");
   $("introHint").classList.remove("show");
@@ -120,12 +132,25 @@ async function loadNode(nodeId) {
       session_id: sessionId,
     });
   } catch (e) {
-    $("introText").textContent = "（連線失敗，請稍後再試）";
+    if (myToken === requestToken) {
+      $("introText").textContent = "（連線失敗，請稍後再試）";
+    }
+    loading = false;
     return;
   }
+
+  // 如果在等待期間，使用者又觸發了更新的請求，這次的結果就是過期的，直接丟棄
+  if (myToken !== requestToken) return;
+
   currentNode = node;
+  applyEffects(node.effect);
 
   await typewriter($("introText"), node.text);
+
+  // 打字結束後也要再檢查一次，避免打字這段期間又有更新的請求蓋過來
+  if (myToken !== requestToken) return;
+
+  loading = false;
 
   if (node.isEnding) {
     const isNew = saveEnding(node.ending);
@@ -254,4 +279,25 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/*
+=========================================================================
+節點效果
+=========================================================================
+*/
+function applyEffects(effectList) {
+  const frame = $("frame");
+  const dialog = $("introText");
+
+  // 先清掉上一格留下的效果，避免疊加殘留
+  Object.values(EFFECT_MAP).forEach(({ target, className }) => {
+    (target === "frame" ? frame : dialog).classList.remove(className);
+  });
+
+  (effectList || []).forEach((key) => {
+    const conf = EFFECT_MAP[key];
+    if (!conf) return; // 資料庫填了未知效果名稱時，安全忽略，不讓畫面壞掉
+    (conf.target === "frame" ? frame : dialog).classList.add(conf.className);
+  });
 }
