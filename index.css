@@ -50,7 +50,7 @@ body {
   max-height: 100vh;
   overflow: hidden;
   /* 背景圖：填滿畫框、紅色漸層固定在底部；圖片載入前先顯示深色 */
-  background: var(--background) url("./assets/img/bg.webp") center bottom /
+  background: var(--background) url("https://voldosiyprpqirsvlnmx.supabase.co/storage/v1/object/public/img/bg.webp") center bottom /
     cover no-repeat;
 }
 
