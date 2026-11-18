@@ -168,11 +168,13 @@ audio {
   text-orientation: upright;
   writing-mode: vertical-rl;
   font-weight: 900;
-  font-size: clamp(48px, 10vh, 56px);
+  font-size: min(56px, 9vh); /* 5 個字的總高度跟著螢幕高度縮放，矮螢幕也放得下 */
   letter-spacing: 0.12em;
   line-height: 1.05;
   color: var(--text);
   height: auto;
+  white-space: nowrap; /* 不准換行，確保直排只有一行 */
+  flex-shrink: 0; /* 不讓 flex 容器把標題壓矮 */
   margin: 8px 0 34px;
 }
 

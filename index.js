@@ -90,6 +90,21 @@ function updateBgmIcon() {
   $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
 }
 
+// 預先下載所有場景圖：頁面一打開就照劇情順序在背景下載（同時 4 張），
+// 玩家還在封面時圖片就已經進了快取，進遊戲後切換場景不用再等
+function preloadScenes() {
+  const urls = [...new Set(Object.values(SCENES).flat())];
+  let i = 0;
+  const next = () => {
+    if (i >= urls.length) return;
+    const img = new Image();
+    img.onload = img.onerror = next;
+    img.src = IMG_DIR + urls[i++];
+  };
+  for (let k = 0; k < 4; k++) next();
+}
+window.addEventListener("load", preloadScenes);
+
 document.addEventListener("DOMContentLoaded", () => {
   $("bgm")
     .play()

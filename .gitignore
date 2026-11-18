@@ -6,3 +6,10 @@ supabase
 *.gdoc
 *.gslides
 *.gform
+
+assets/images/
+assets-list.txt
+*.zip
+chars.txt
+convert_font.psl
+scripts
