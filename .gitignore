@@ -2,3 +2,7 @@
 .vscode
 
 supabase
+*.gsheet
+*.gdoc
+*.gslides
+*.gform

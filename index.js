@@ -9,6 +9,53 @@ const ENDINGS_KEY = "vn_endings_v1"; // localStorage key
 
 /*
 =========================================================================
+素材設定：★ 請依照你實際的資料夾 / 檔名修改這一區 ★
+資料庫只會寫代號（例如 "fog"、"walking_at_night"），實際檔案路徑都在這裡
+=========================================================================
+*/
+const IMG_DIR = "./assets/images/";
+const SFX_DIR = "./assets/images/音樂/音效/";
+
+// 產生一組連號檔名
+// seq("霧", 4)         → 霧/霧.jpg、霧/霧2.jpg、霧/霧3.jpg、霧/霧4.jpg（第一張沒有數字）
+// seq("燈籠", 6, true) → 燈籠/燈籠1.jpg … 燈籠/燈籠6.jpg（第一張就有數字 1）
+const seq = (name, count, firstNumbered = false) =>
+  Array.from({ length: count }, (_, i) => {
+    const num = i === 0 && !firstNumbered ? "" : i + 1;
+    return `${name}/${name}${num}.jpg`;
+  });
+
+// 場景圖：每個代號對應一組圖（照順序）
+const SCENES = {
+  fog: seq("霧", 4), // 霧 1~4
+  lantern: seq("燈籠", 6, true), // 燈籠 共 6 張
+  squid: seq("魷魚人", 8), // 魷魚人 共 8 張
+  footprint: seq("腳印", 3), // 腳印 共 3 張
+  handprint: ["手印/手印1.jpg"], // 手印1
+  bloodprint: ["手印/血印.jpg"], // 手印資料夾中的血印
+  smile: ["金率音/合併.jpg"], // 金率音笑的畫面
+  door: seq("門", 3), // 門 共 3 張
+  wine: seq("酒", 21), // 酒 共 21 張
+  glass: seq("玻璃", 2), // 玻璃、玻璃2
+};
+
+// 音效：代號 → 檔名
+const SOUNDS = {
+  slap: "Slap in the face.mp3",
+  walking_at_night: "walking_at_night.mp3",
+  breath: "Long single breath trough mouth.mp3",
+  whoosh: "Whoosh (Clothing Drag).mp3",
+  mountain_road: "mountain_road.mp3",
+  splat: "Splat Sounds.mp3",
+  door_open: "門を開ける.mp3",
+  drinking1: "drinking1.mp3",
+  glass_break: "Glass Breaking.mp3",
+  white_noise: "white_noise2.mp3",
+};
+const SFX_VOLUME = 0.8;
+
+/*
+=========================================================================
 全域變數
 =========================================================================
 */
@@ -18,11 +65,19 @@ let sessionId = null;
 let currentNode = null;
 let loading = false;
 let requestToken = 0;
+let userMuted = false; // 玩家自己按了靜音（不是被瀏覽器擋掉自動播放）
 const $ = (id) => document.getElementById(id);
 
+// 每一格都重新套用的文字 / 畫面效果
 const EFFECT_MAP = {
   dim: { target: "frame", className: "fx-dim" },
   "ghost-font": { target: "dialog", className: "fx-ghost-font" },
+};
+
+// 跟著場景走的效果：下一格沒有指定新場景時會保留
+const SCENE_FX = {
+  sway: { target: "bg-layer", className: "fx-sway" }, // 左右微微晃動
+  "push-in": { target: "stage", className: "fx-push-in" }, // 畫面往前推
 };
 
 /*
@@ -31,12 +86,16 @@ helper function
 =========================================================================
 */
 // 音效控制
+function updateBgmIcon() {
+  $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   $("bgm")
     .play()
     .catch((error) => {
       console.log("瀏覽器已封鎖自動播放，需要使用者互動。");
-      $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
+      updateBgmIcon();
     });
 });
 
@@ -44,17 +103,28 @@ document.addEventListener("DOMContentLoaded", () => {
 $("bgmBtn").addEventListener("click", () => {
   if ($("bgm").paused) {
     $("bgm").play();
+    userMuted = false;
   } else {
     $("bgm").pause();
+    userMuted = true;
+    stopSounds(); // 靜音時音效也一起停
   }
-  $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
+  updateBgmIcon();
 });
 
 // 把 *粗體* 語法轉成「每個字要不要套粗體」的清單，星號本身不會被打出來
+// 想顯示星號本身時寫成 \*
 function parseInlineMarkup(text) {
   const tokens = [];
   let bold = false;
-  for (const ch of text) {
+  const chars = Array.from(text);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    if (ch === "\\" && chars[i + 1] === "*") {
+      tokens.push({ ch: "*", bold }); // 跳脫的星號：照原樣顯示
+      i++;
+      continue;
+    }
     if (ch === "*") {
       bold = !bold; // 星號只用來切換狀態，不進入輸出內容
       continue;
@@ -64,22 +134,22 @@ function parseInlineMarkup(text) {
   return tokens;
 }
 
-
 // 打字機：回傳 Promise；點擊可跳過；支援 *文字* 顯示為粗體
-function typewriter(el, rawText, speed = 55) {
+// onProgress(n)：每打出一個字就回報目前打到第幾個字（給音效時間點用）
+function typewriter(el, rawText, speed = 55, onProgress) {
   return new Promise((res) => {
     typing = true;
     skip = false;
     el.innerHTML = "";
- 
+
     const tokens = parseInlineMarkup(rawText);
     let i = 0;
     let boldEl = null; // 目前正在輸出的粗體區塊（沒有就是 null，代表輸出到最外層）
- 
+
     const cur = document.createElement("span");
     cur.className = "cursor";
     el.appendChild(cur);
- 
+
     const appendChar = (ch, bold) => {
       if (bold) {
         if (!boldEl) {
@@ -93,7 +163,7 @@ function typewriter(el, rawText, speed = 55) {
         el.insertBefore(document.createTextNode(ch), cur);
       }
     };
- 
+
     // 跳過動畫時，一次把全部文字（含粗體格式）畫出來，不是純文字
     const revealAll = () => {
       el.innerHTML = "";
@@ -113,16 +183,18 @@ function typewriter(el, rawText, speed = 55) {
       });
       el.appendChild(cur);
     };
- 
+
     const step = () => {
       if (skip) {
         revealAll();
+        if (onProgress) onProgress(tokens.length);
         finish();
         return;
       }
       if (i < tokens.length) {
         const { ch, bold } = tokens[i++];
         appendChar(ch, bold);
+        if (onProgress) onProgress(i);
         setTimeout(
           step,
           ch === "，" || ch === "。" || ch === "——" ? speed * 6 : speed,
@@ -138,23 +210,35 @@ function typewriter(el, rawText, speed = 55) {
   });
 }
 
-
 /*
 =========================================================================
 引擎
 =========================================================================
 */
-const screens = ["cover", "intro", "ending", "gallery"];
+const screens = ["cover", "intro", "ending", "gallery", "credits"];
 
 function show(name) {
   screens.forEach((s) => $("sc-" + s).classList.remove("on"));
   $("sc-" + name).classList.add("on");
   $("restartBtn").style.display = name === "cover" ? "none" : "flex";
-  if (name !== "intro") applyEffects([]); // 離開遊戲畫面時清掉殘留效果
+  if (name !== "intro") {
+    // 離開遊戲畫面時清掉殘留效果
+    applyEffects([]);
+    resetNodeFx();
+    clearScene();
+  }
 }
 
 // 開始新的一局
 async function beginGame() {
+  // 自動播放被擋掉的話，趁玩家按「進入怪談」這次點擊把音樂補播
+  if (!userMuted && $("bgm").paused) {
+    $("bgm")
+      .play()
+      .then(updateBgmIcon)
+      .catch(() => {});
+  }
+  clearScene();
   show("intro");
   $("choices").innerHTML = "";
   $("choices").classList.remove("show");
@@ -198,8 +282,9 @@ async function loadNode(nodeId) {
 
   currentNode = node;
   applyEffects(node.effect);
+  const onProgress = runNodeFx(node.effect, node.text || "");
 
-  await typewriter($("introText"), node.text);
+  await typewriter($("introText"), node.text || "", 55, onProgress);
 
   // 打字結束後也要再檢查一次，避免打字這段期間又有更新的請求蓋過來
   if (myToken !== requestToken) return;
@@ -227,7 +312,11 @@ function renderChoices(choices) {
     const btn = document.createElement("button");
     btn.className = "btn";
     btn.textContent = c.label;
-    btn.onclick = () => loadNode(c.next);
+    if (c.disabled || !c.next) {
+      btn.disabled = true; // 暫未開放的選項：顯示但不能點
+    } else {
+      btn.onclick = () => loadNode(c.next);
+    }
     box.appendChild(btn);
   });
   requestAnimationFrame(() => box.classList.add("show"));
@@ -283,6 +372,8 @@ $("endingGalleryBtn").onclick = () => {
   show("gallery");
 };
 $("endingReplayBtn").onclick = () => show("cover");
+$("creditsBtn").onclick = () => show("credits");
+$("creditsBackBtn").onclick = () => show("cover");
 
 // 點擊畫面：正在打字就跳過；沒有選項但有 autoNext 就繼續播下一格
 $("sc-intro").addEventListener("click", (e) => {
@@ -337,7 +428,7 @@ function showToast(msg) {
 
 /*
 =========================================================================
-節點效果
+節點效果：文字效果（每格重設）
 =========================================================================
 */
 function applyEffects(effectList) {
@@ -350,8 +441,214 @@ function applyEffects(effectList) {
   });
 
   (effectList || []).forEach((key) => {
+    if (typeof key !== "string") return; // 場景、音效物件交給 runNodeFx 處理
     const conf = EFFECT_MAP[key];
     if (!conf) return; // 資料庫填了未知效果名稱時，安全忽略，不讓畫面壞掉
     (conf.target === "frame" ? frame : dialog).classList.add(conf.className);
   });
+}
+
+/*
+=========================================================================
+節點效果：場景圖、畫面特效、音效
+-------------------------------------------------------------------------
+effect 欄位是一個陣列，可以混用：
+  字串  "sway"        左右微微晃動（跟著場景保留）
+        "push-in"     畫面往前推（跟著場景保留）
+        "flash"       閃一下白光
+        "afterimage"  殘影（約 2.4 秒）
+        "glitch"      亂碼全屏（到下一格為止）
+  物件  {"type":"bg","set":"fog","pick":[0,1,2],"mode":"stack","interval":1200}
+          set      SCENES 裡的代號
+          pick     "first" / "last" / 數字 / 數字陣列，不填 = 全部
+          mode     "stack" = 一張接一張淡入疊上；不填 = 同時出現
+          interval stack 時每張間隔毫秒，預設 700
+          opacity  透明度 0~1，預設 1
+        {"type":"bg","color":"#000"}   純色畫面（黑畫面、白畫面）
+        {"type":"sfx","name":"breath","at":"你喘了口氣","duration":900}
+          at       打字打到這段文字時才播放；不填 = 一進來就播
+          duration 只播前幾毫秒（例如「只用第一聲」）
+同一格有任何 bg 或 sway / push-in → 換新場景；都沒有 → 沿用上一格的畫面
+=========================================================================
+*/
+let fxTimers = []; // 這一格排程中的計時器，換格時全部取消
+let fxSounds = []; // 這一格正在播的音效
+let glitchTimer = null;
+
+function later(fn, ms) {
+  fxTimers.push(setTimeout(fn, ms));
+}
+
+function stopSounds() {
+  fxSounds.forEach((a) => a.pause());
+  fxSounds = [];
+}
+
+function playSfx(name, duration) {
+  if (userMuted) return;
+  const file = SOUNDS[name];
+  if (!file) return; // 未知代號：安全忽略
+  const a = new Audio(SFX_DIR + file);
+  a.volume = SFX_VOLUME;
+  a.play().catch(() => {});
+  fxSounds.push(a);
+  if (duration) later(() => a.pause(), duration);
+}
+
+// 換格時：停掉上一格的一次性效果（音效、亂碼、排程）
+function resetNodeFx() {
+  fxTimers.forEach(clearTimeout);
+  fxTimers = [];
+  stopSounds();
+  stopGlitch();
+}
+
+// 清空整個場景（離開遊戲畫面、重新開始時）
+function clearScene() {
+  const layer = $("bg-layer");
+  layer.innerHTML = "";
+  Object.values(SCENE_FX).forEach(({ target, className }) =>
+    $(target).classList.remove(className),
+  );
+  $("stage").classList.remove("has-bg");
+}
+
+function resolveFrames(set, pick) {
+  const all = SCENES[set] || [];
+  if (pick === undefined || pick === "all") return all;
+  if (pick === "first") return all.slice(0, 1);
+  if (pick === "last") return all.slice(-1);
+  if (typeof pick === "number") return all[pick] ? [all[pick]] : [];
+  if (Array.isArray(pick)) return pick.map((i) => all[i]).filter(Boolean);
+  return all;
+}
+
+function addFrame(src, color, opacity, delay) {
+  const el = document.createElement(src ? "img" : "div");
+  el.className = "bg-frame";
+  el.style.setProperty("--o", opacity);
+  if (src) {
+    el.alt = "";
+    el.src = IMG_DIR + src;
+  } else {
+    el.style.background = color;
+  }
+  $("bg-layer").appendChild(el);
+
+  const reveal = () => later(() => el.classList.add("in"), delay);
+  if (src && !el.complete) el.addEventListener("load", reveal, { once: true });
+  else reveal();
+}
+
+function setScene(bgList) {
+  const layer = $("bg-layer");
+  // 舊畫面淡出後移除
+  Array.from(layer.children).forEach((el) => {
+    el.classList.remove("in");
+    setTimeout(() => el.remove(), 900);
+  });
+
+  let delay = 0;
+  bgList.forEach((bg) => {
+    const opacity = bg.opacity ?? 1;
+    if (bg.color) {
+      addFrame(null, bg.color, opacity, delay);
+      return;
+    }
+    const frames = resolveFrames(bg.set, bg.pick);
+    const interval = bg.interval ?? 700;
+    const stack = bg.mode === "stack";
+    frames.forEach((src, i) =>
+      addFrame(src, null, opacity, stack ? delay + i * interval : delay),
+    );
+    if (stack) delay += frames.length * interval;
+  });
+
+  $("stage").classList.toggle("has-bg", bgList.length > 0);
+}
+
+function flash() {
+  const el = $("fx-flash");
+  el.classList.remove("on");
+  void el.offsetWidth; // 重新觸發動畫
+  el.classList.add("on");
+}
+
+function afterimage() {
+  const layer = $("bg-layer");
+  Array.from(layer.querySelectorAll(".bg-frame.in")).forEach((el) => {
+    const ghost = el.cloneNode(true);
+    ghost.classList.add("ghost");
+    layer.appendChild(ghost);
+    setTimeout(() => ghost.remove(), 2400);
+  });
+}
+
+const GLITCH_CHARS = "@`,[;\">{(<^}/:*?-=+%)&.#|!$";
+function startGlitch() {
+  const el = $("fx-glitch");
+  el.classList.add("on");
+  const draw = () => {
+    let s = "";
+    for (let i = 0; i < 1200; i++) {
+      s += GLITCH_CHARS[(Math.random() * GLITCH_CHARS.length) | 0];
+    }
+    el.textContent = s;
+  };
+  draw();
+  glitchTimer = setInterval(draw, 80);
+}
+function stopGlitch() {
+  clearInterval(glitchTimer);
+  glitchTimer = null;
+  $("fx-glitch").classList.remove("on");
+  $("fx-glitch").textContent = "";
+}
+
+// 套用一格的場景 / 特效 / 音效；回傳給打字機用的進度回呼
+function runNodeFx(effectList, rawText) {
+  resetNodeFx();
+
+  const list = Array.isArray(effectList) ? effectList : [];
+  const bgs = list.filter((e) => e && e.type === "bg");
+  const keys = list.filter((e) => typeof e === "string");
+  const sceneKeys = keys.filter((k) => SCENE_FX[k]);
+
+  // 有指定新場景 → 換場景；沒有 → 沿用上一格
+  if (bgs.length || sceneKeys.length) {
+    Object.values(SCENE_FX).forEach(({ target, className }) =>
+      $(target).classList.remove(className),
+    );
+    if (bgs.length) setScene(bgs);
+    sceneKeys.forEach((k) =>
+      $(SCENE_FX[k].target).classList.add(SCENE_FX[k].className),
+    );
+  }
+
+  // 一次性特效（等新圖片開始淡入再觸發）
+  if (keys.includes("flash")) later(flash, 60);
+  if (keys.includes("afterimage")) later(afterimage, 500);
+  if (keys.includes("glitch")) startGlitch();
+
+  // 音效：沒有 at 的直接播，有 at 的等打字打到那段文字
+  const plain = parseInlineMarkup(rawText)
+    .map((t) => t.ch)
+    .join("");
+  const cues = [];
+  list
+    .filter((e) => e && e.type === "sfx")
+    .forEach((s) => {
+      const idx = s.at ? plain.indexOf(s.at) : -1;
+      if (idx < 0) playSfx(s.name, s.duration);
+      else cues.push({ idx, s });
+    });
+
+  return (typedCount) => {
+    for (let i = cues.length - 1; i >= 0; i--) {
+      if (typedCount > cues[i].idx) {
+        playSfx(cues[i].s.name, cues[i].s.duration);
+        cues.splice(i, 1);
+      }
+    }
+  };
 }

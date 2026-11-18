@@ -12,6 +12,12 @@
   <body>
     <div id="main">
       <div id="frame">
+        <!-- 場景圖層（在背景圖之上、文字之下） -->
+        <div id="stage"><div id="bg-layer"></div></div>
+        <!-- 全螢幕特效：亂碼、閃光 -->
+        <div id="fx-glitch" aria-hidden="true"></div>
+        <div id="fx-flash" aria-hidden="true"></div>
+
         <!-- 控制按鈕 -->
         <div class="controls">
           <button class="icon-btn" id="bgmBtn" aria-label="靜音">♪</button>
@@ -31,6 +37,9 @@
           <button class="btn" id="startBtn">進入怪談</button>
           <button class="btn-ghost" id="galleryBtn" style="margin-top: 18px">
             結局圖鑑
+          </button>
+          <button class="btn-ghost" id="creditsBtn" style="margin-top: 6px">
+            音樂來源
           </button>
         </section>
 
@@ -70,15 +79,62 @@
           </button>
         </section>
 
+        <!-- 音樂來源 -->
+        <section class="screen" id="sc-credits">
+          <h2 class="gallery-title">音樂來源</h2>
+          <p class="gallery-count">Music powered by BreakingCopyright</p>
+          <ul class="credits-list">
+            <li>
+              <a
+                href="https://breakingcopyright.com/song/audionautix-horror-music"
+                target="_blank"
+                rel="noopener"
+                >Horror Music</a
+              >
+              <span>by Audionautix</span>
+              <span
+                >Creative Commons (BY 4.0) |
+                <a
+                  href="https://creativecommons.org/licenses/by/4.0/"
+                  target="_blank"
+                  rel="noopener"
+                  >License</a
+                ></span
+              >
+            </li>
+            <li>
+              <a
+                href="https://breakingcopyright.com/song/darren-curtis-witch-by-the-sea"
+                target="_blank"
+                rel="noopener"
+                >Witch By The Sea</a
+              >
+              <span>by Darren Curtis</span>
+              <span
+                >Creative Commons (BY 3.0) |
+                <a
+                  href="https://creativecommons.org/licenses/by/3.0/"
+                  target="_blank"
+                  rel="noopener"
+                  >License</a
+                ></span
+              >
+            </li>
+          </ul>
+          <button
+            class="btn-ghost"
+            id="creditsBackBtn"
+            style="margin-top: 24px"
+          >
+            返回
+          </button>
+        </section>
+
         <!-- 新結局解鎖提示 -->
         <div class="toast" id="toast"></div>
       </div>
     </div>
-    <a href="https://breakingcopyright.com/song/audionautix-horror-music"
-      >Horror Music</a
-    >
-    by Audionautix | Creative Commons (BY 4.0) |
-    <a href="https://creativecommons.org/licenses/by/4.0/">License</a>
+
     <audio id="bgm" src="./assets/bgm/music.mp3" loop autoplay></audio>
     <script src="index.js"></script>
   </body>

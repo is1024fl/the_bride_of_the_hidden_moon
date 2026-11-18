@@ -1,6 +1,6 @@
 @font-face {
   font-family: "ZhaohuaTypewriter";
-  src: url("./assets/fonts/ZhaohuaTypewriter.subset.ttf") format("woff2");
+  src: url("./assets/fonts/ZhaohuaTypewriter.subset.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap; /* 確保字體載入前，網頁文字不會隱形 */
@@ -49,7 +49,9 @@ body {
   max-width: min(100vw, calc(100vh * 909 / 2044)); /* 鎖手機 909:2044 直幅 */
   max-height: 100vh;
   overflow: hidden;
-  background: var(--background);
+  /* 背景圖：填滿畫框、紅色漸層固定在底部；圖片載入前先顯示深色 */
+  background: var(--background) url("./assets/images/背景.jpg") center bottom /
+    cover no-repeat;
 }
 
 audio {
@@ -85,7 +87,8 @@ audio {
   margin-left: auto;
   width: fit-content;
   z-index: 60;
-  display: f/slex;
+  display: flex;
+  flex-direction: column; /* 直排 */
   gap: 10px;
 }
 .icon-btn {
@@ -215,18 +218,19 @@ audio {
   text-align: center;
   font-size: 11px;
   letter-spacing: 0.4em;
-  color: var(--text-dim);
+  color: var(--text);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); /* 在紅色背景上也看得清楚 */
   margin-top: 18px;
   opacity: 0;
   transition: opacity 0.6s;
 }
 .tap-hint.show {
-  opacity: 0.55;
+  opacity: 0.8;
   animation: hintpulse 2.4s ease-in-out infinite;
 }
 @keyframes hintpulse {
   50% {
-    opacity: 0.2;
+    opacity: 0.35;
   }
 }
 
@@ -247,6 +251,17 @@ audio {
   font-size: 15px;
   letter-spacing: 0.1em;
   padding: 14px 20px;
+}
+/* 暫未開放的選項 */
+.choices .btn:disabled,
+.choices .btn:disabled:hover {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--text-dim);
+  background: transparent;
+  border-color: var(--text-dim);
+  border-style: dashed;
+  letter-spacing: 0.1em;
 }
 
 /* ---- 結局畫面 ---- */
@@ -317,6 +332,39 @@ audio {
   color: #6b6862;
 }
 
+/* ---- 音樂來源 ---- */
+.credits-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.credits-list li {
+  border: 1px solid var(--dialog-box);
+  background: rgba(10, 9, 8, 0.55); /* 疊在紅色背景上時保持可讀 */
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.credits-list li > a:first-child {
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: 0.1em;
+}
+.credits-list a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.credits-list a:hover {
+  color: #fff;
+}
+
 /* ---- 新結局提示 toast ---- */
 .toast {
   position: absolute;
@@ -349,6 +397,126 @@ audio {
   z-index: 40;
   pointer-events: none;
   transition: opacity 1.1s var(--fade);
+}
+
+/* ---- 場景圖層 ---- */
+#stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* 背景圖之上、各畫面（z-index:10）之下 */
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: center 45%;
+  transition: transform 0.8s var(--fade);
+}
+#bg-layer {
+  position: absolute;
+  inset: 0 -16px; /* 左右多留一點，晃動時不會露出邊緣 */
+}
+.bg-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s var(--fade);
+}
+.bg-frame.in {
+  opacity: var(--o, 1);
+}
+/* 有場景圖時，底部壓暗一點，讓對白看得清楚 */
+#stage.has-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 45%, rgba(0, 0, 0, 0.6));
+}
+
+/* 左右微微晃動 */
+#bg-layer.fx-sway {
+  animation: sway 6s ease-in-out infinite;
+}
+@keyframes sway {
+  0%,
+  100% {
+    transform: translateX(-8px);
+  }
+  50% {
+    transform: translateX(8px);
+  }
+}
+
+/* 畫面往前推 */
+#stage.fx-push-in {
+  transform: scale(1.22);
+  transition: transform 4s cubic-bezier(0.3, 0, 0.6, 1);
+}
+
+/* 殘影 */
+.bg-frame.ghost {
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  animation: ghost 0.16s steps(2) infinite;
+}
+@keyframes ghost {
+  0% {
+    transform: translateX(-14px);
+  }
+  100% {
+    transform: translateX(14px);
+  }
+}
+
+/* 閃光 */
+#fx-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+#fx-flash.on {
+  animation: flash 0.7s ease-out;
+}
+@keyframes flash {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 亂碼全屏 */
+#fx-glitch {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: monospace;
+  font-size: 15px;
+  line-height: 1.15;
+  word-break: break-all;
+  color: rgba(255, 70, 70, 0.55);
+  opacity: 0;
+}
+#fx-glitch.on {
+  opacity: 1;
+  animation: glitch 0.12s steps(2) infinite;
+}
+@keyframes glitch {
+  0% {
+    transform: translate(-3px, 1px);
+  }
+  100% {
+    transform: translate(3px, -1px);
+  }
 }
 
 /* ---- 節點效果：特殊字體 ---- */
