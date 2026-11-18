@@ -13,43 +13,42 @@ const ENDINGS_KEY = "vn_endings_v1"; // localStorage key
 資料庫只會寫代號（例如 "fog"、"walking_at_night"），實際檔案路徑都在這裡
 =========================================================================
 */
-const IMG_DIR = "./assets/images/";
-const SFX_DIR = "./assets/images/音樂/音效/";
+// 圖片、音效都放在 Supabase Storage 的 public bucket「img」
+// （compress_images.py 輸出的 assets/img 裡的內容，整包上傳到這個 bucket）
+const STORAGE =
+  "https://voldosiyprpqirsvlnmx.supabase.co/storage/v1/object/public/img/";
+const IMG_DIR = STORAGE;
+const SFX_DIR = STORAGE + "sfx/";
 
-// 產生一組連號檔名
-// seq("霧", 4)         → 霧/霧.jpg、霧/霧2.jpg、霧/霧3.jpg、霧/霧4.jpg（第一張沒有數字）
-// seq("燈籠", 6, true) → 燈籠/燈籠1.jpg … 燈籠/燈籠6.jpg（第一張就有數字 1）
-const seq = (name, count, firstNumbered = false) =>
-  Array.from({ length: count }, (_, i) => {
-    const num = i === 0 && !firstNumbered ? "" : i + 1;
-    return `${name}/${name}${num}.jpg`;
-  });
+// 產生一組連號檔名：seq("fog", 4) → fog/1.webp、fog/2.webp、fog/3.webp、fog/4.webp
+const seq = (folder, count) =>
+  Array.from({ length: count }, (_, i) => `${folder}/${i + 1}.webp`);
 
 // 場景圖：每個代號對應一組圖（照順序）
 const SCENES = {
-  fog: seq("霧", 4), // 霧 1~4
-  lantern: seq("燈籠", 6, true), // 燈籠 共 6 張
-  squid: seq("魷魚人", 8), // 魷魚人 共 8 張
-  footprint: seq("腳印", 3), // 腳印 共 3 張
-  handprint: ["手印/手印1.jpg"], // 手印1
-  bloodprint: ["手印/血印.jpg"], // 手印資料夾中的血印
-  smile: ["金率音/合併.jpg"], // 金率音笑的畫面
-  door: seq("門", 3), // 門 共 3 張
-  wine: seq("酒", 21), // 酒 共 21 張
-  glass: seq("玻璃", 2), // 玻璃、玻璃2
+  fog: seq("fog", 4), // 霧 1~4
+  lantern: seq("lantern", 6), // 燈籠 共 6 張
+  squid: seq("squid", 8), // 魷魚人 共 8 張
+  footprint: seq("footprint", 3), // 腳印 共 3 張
+  handprint: ["handprint/1.webp"], // 手印1
+  bloodprint: ["handprint/blood.webp"], // 手印資料夾中的血印
+  smile: ["kim/1.webp"], // 金率音笑的畫面（合併.jpg）
+  door: seq("door", 3), // 門 共 3 張
+  wine: seq("wine", 21), // 酒 共 21 張
+  glass: seq("glass", 2), // 玻璃、玻璃2
 };
 
 // 音效：代號 → 檔名
 const SOUNDS = {
-  slap: "Slap in the face.mp3",
+  slap: "slap_in_the_face.mp3",
   walking_at_night: "walking_at_night.mp3",
-  breath: "Long single breath trough mouth.mp3",
-  whoosh: "Whoosh (Clothing Drag).mp3",
+  breath: "long_single_breath_trough_mouth.mp3",
+  whoosh: "whoosh_clothing_drag.mp3",
   mountain_road: "mountain_road.mp3",
-  splat: "Splat Sounds.mp3",
-  door_open: "門を開ける.mp3",
+  splat: "splat_sounds.mp3",
+  door_open: "door_open.mp3",
   drinking1: "drinking1.mp3",
-  glass_break: "Glass Breaking.mp3",
+  glass_break: "glass_breaking.mp3",
   white_noise: "white_noise2.mp3",
 };
 const SFX_VOLUME = 0.8;
@@ -90,10 +89,21 @@ function updateBgmIcon() {
   $("bgmBtn").textContent = $("bgm").paused ? "♪̸" : "♪";
 }
 
-// 預先下載所有場景圖：頁面一打開就照劇情順序在背景下載（同時 4 張），
-// 玩家還在封面時圖片就已經進了快取，進遊戲後切換場景不用再等
-function preloadScenes() {
-  const urls = [...new Set(Object.values(SCENES).flat())];
+// 分段預先下載場景圖：只下載「接下來可能用到」的圖，不浪費流量
+// 頁面一打開先下載開場用的圖；玩家選了 B / C / D，才下載那條線的圖
+const PRELOAD_GROUPS = {
+  opening: ["fog", "lantern", "squid"],
+  b: ["handprint", "footprint", "smile", "bloodprint"],
+  c: ["door", "wine", "glass"],
+  d: ["door"],
+};
+const preloadedGroups = new Set();
+
+function preloadGroup(key) {
+  const sets = PRELOAD_GROUPS[key];
+  if (!sets || preloadedGroups.has(key)) return;
+  preloadedGroups.add(key);
+  const urls = [...new Set(sets.flatMap((s) => SCENES[s] || []))];
   let i = 0;
   const next = () => {
     if (i >= urls.length) return;
@@ -101,9 +111,9 @@ function preloadScenes() {
     img.onload = img.onerror = next;
     img.src = IMG_DIR + urls[i++];
   };
-  for (let k = 0; k < 4; k++) next();
+  for (let k = 0; k < 4; k++) next(); // 同時下載 4 張
 }
-window.addEventListener("load", preloadScenes);
+window.addEventListener("load", () => preloadGroup("opening"));
 
 document.addEventListener("DOMContentLoaded", () => {
   $("bgm")
@@ -271,6 +281,7 @@ async function beginGame() {
 async function loadNode(nodeId) {
   if (loading) return; // 上一格還在讀取中，忽略這次點擊，避免重複觸發
   loading = true;
+  preloadGroup(nodeId[0]); // 進入 b001 / c001 / d001 時，開始下載那條線的圖
   const myToken = ++requestToken; // 這次請求的序號，用來辨識「是不是最新這次點擊」
 
   $("choices").innerHTML = "";
