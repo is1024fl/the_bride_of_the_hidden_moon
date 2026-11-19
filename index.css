@@ -283,7 +283,8 @@ audio {
 .cover-title {
   width: 100%;
   flex-shrink: 0; /* 不讓 flex 容器把標題壓扁 */
-  margin: 8px 0 34px;
+  /* 下方 margin 設 auto：標題被推到畫面最上方，選項留在下方，中間空出來不擋到臉 */
+  margin: 0 0 auto;
   line-height: 0;
 }
 /* 標題 logo：寬不超過畫面 75%、高不超過螢幕一半，直式橫式 logo 都適用 */
@@ -291,7 +292,7 @@ audio {
   display: block;
   margin: 0 auto;
   max-width: 75%;
-  max-height: 50vh;
+  max-height: 42vh;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -416,7 +417,7 @@ audio {
    效果等於「背景圖壓低透明度、疊在黑底上」，字比較清楚 */
 #sc-gallery,
 #sc-credits {
-  background: rgba(0, 0, 0, 0.6); /* 數字越大越黑、背景圖越淡 */
+  background: rgba(0, 0, 0, 0.75); /* 數字越大越黑、背景圖越淡 */
 }
 .gallery-title {
   font-size: 22px;
