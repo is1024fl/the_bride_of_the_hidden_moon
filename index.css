@@ -167,8 +167,100 @@ audio {
 /* 主選單專用背景圖（只在封面出現，離開封面會跟著畫面一起淡出） */
 #sc-cover {
   background: var(--background)
+    url("https://voldosiyprpqirsvlnmx.supabase.co/storage/v1/object/public/img/kim/1.webp")
+    center / cover no-repeat;
+}
+/* 第二張封面圖：平常隱藏，點擊「進入怪談」時切換過去
+   （元素一開始就在頁面上，圖片會先下載好，切換時不用等） */
+#sc-cover .cover-alt {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--background)
     url("https://voldosiyprpqirsvlnmx.supabase.co/storage/v1/object/public/img/kim/2.webp")
     center / cover no-repeat;
+  opacity: 0;
+  pointer-events: none;
+}
+#sc-cover > *:not(.cover-alt) {
+  position: relative;
+  z-index: 1;
+}
+/* 邊緣滲出暗紅色的遮罩 */
+#sc-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(110, 0, 0, 0.9) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- 點擊「進入怪談」的異變效果（約 1.7 秒） ---- */
+/* 選項先消失，不能再點 */
+#sc-cover.possessed .btn,
+#sc-cover.possessed .btn-ghost {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+/* 整個畫面抖動 */
+#sc-cover.possessed {
+  animation: cover-shake 0.9s linear;
+}
+/* 兩張圖快速閃爍交替、顏色失真，最後停在第二張 */
+#sc-cover.possessed .cover-alt {
+  opacity: 1;
+  animation: cover-flicker 0.9s steps(1) both;
+}
+/* logo 跟著錯位閃爍 */
+#sc-cover.possessed .cover-title {
+  animation: logo-glitch 0.9s steps(1) both;
+}
+/* 最後從邊緣滲出暗紅 */
+#sc-cover.possessed::after {
+  animation: cover-bleed 1.7s ease-in both;
+}
+@keyframes cover-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-6px, 2px); }
+  20% { transform: translate(5px, -3px); }
+  30% { transform: translate(-4px, -2px); }
+  40% { transform: translate(6px, 3px); }
+  50% { transform: translate(-3px, 1px); }
+  60% { transform: translate(4px, -2px); }
+  70% { transform: translate(-2px, 2px); }
+  80% { transform: translate(2px, -1px); }
+}
+@keyframes cover-flicker {
+  0% { opacity: 0; filter: none; }
+  10% { opacity: 1; filter: contrast(1.8) saturate(2); }
+  18% { opacity: 0; filter: none; }
+  28% { opacity: 1; filter: invert(1) hue-rotate(180deg); }
+  34% { opacity: 0; filter: none; }
+  46% { opacity: 1; filter: contrast(2) brightness(0.6); }
+  54% { opacity: 0; filter: none; }
+  62% { opacity: 1; filter: saturate(3) hue-rotate(-20deg); }
+  70%, 100% { opacity: 1; filter: none; }
+}
+@keyframes logo-glitch {
+  0% { transform: translate(0, 0); opacity: 1; }
+  12% { transform: translate(-8px, 0) skewX(8deg); opacity: 0.4; }
+  24% { transform: translate(6px, 2px); opacity: 1; }
+  36% { transform: translate(0, -4px) skewX(-12deg); opacity: 0.2; }
+  48% { transform: translate(-4px, 0); opacity: 1; }
+  60% { transform: translate(10px, 0) skewX(6deg); opacity: 0.6; }
+  72%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes cover-bleed {
+  0%, 50% { opacity: 0; }
+  65% { opacity: 1; }
+  100% { opacity: 0.7; }
 }
 /* 主選單的選項：深色底框 + 白字（標題不受影響） */
 #sc-cover .btn,
@@ -189,17 +281,20 @@ audio {
   border-color: var(--text-dim);
 }
 .cover-title {
-  text-orientation: upright;
-  writing-mode: vertical-rl;
-  font-weight: 900;
-  font-size: min(56px, 9vh); /* 5 個字的總高度跟著螢幕高度縮放，矮螢幕也放得下 */
-  letter-spacing: 0.12em;
-  line-height: 1.05;
-  color: var(--text);
-  height: auto;
-  white-space: nowrap; /* 不准換行，確保直排只有一行 */
-  flex-shrink: 0; /* 不讓 flex 容器把標題壓矮 */
+  width: 100%;
+  flex-shrink: 0; /* 不讓 flex 容器把標題壓扁 */
   margin: 8px 0 34px;
+  line-height: 0;
+}
+/* 標題 logo：寬不超過畫面 75%、高不超過螢幕一半，直式橫式 logo 都適用 */
+.cover-logo {
+  display: block;
+  margin: 0 auto;
+  max-width: 75%;
+  max-height: 50vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* ---- 旁白 / 打字機 ---- */
@@ -317,6 +412,12 @@ audio {
 }
 
 /* ---- 結局圖鑑 ---- */
+/* 結局圖鑑、音樂來源：在背景圖上蓋一層半透明黑，
+   效果等於「背景圖壓低透明度、疊在黑底上」，字比較清楚 */
+#sc-gallery,
+#sc-credits {
+  background: rgba(0, 0, 0, 0.6); /* 數字越大越黑、背景圖越淡 */
+}
 .gallery-title {
   font-size: 22px;
   letter-spacing: 0.2em;
@@ -333,12 +434,41 @@ audio {
 .gallery-grid {
   flex: 1;
   overflow-y: auto;
+  /* 捲軸移到畫面右側留白區，卡片寬度不再被捲軸吃掉，左右對稱 */
+  margin-right: -18px;
+  padding-right: 10px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
 }
+/* 圖鑑捲軸：細、圓角、沒有上下箭頭 */
+/* Chrome / Edge / Safari */
+.gallery-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.gallery-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.gallery-grid::-webkit-scrollbar-thumb {
+  background: rgba(214, 210, 204, 0.4);
+  border-radius: 999px;
+}
+.gallery-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(214, 210, 204, 0.7);
+}
+.gallery-grid::-webkit-scrollbar-button {
+  display: none;
+}
+/* Firefox（只給 Firefox，否則新版 Chrome 會忽略上面的圓角設定） */
+@supports (-moz-appearance: none) {
+  .gallery-grid {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(214, 210, 204, 0.4) transparent;
+  }
+}
+
 .ending-card {
-  border: 1px solid var(--dialog-box);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   padding: 16px 18px;
 }
 .ending-card .name {
@@ -353,6 +483,23 @@ audio {
 }
 .ending-card.locked .name {
   color: var(--text-dim);
+}
+/* 結局圖鑑最下方的前導故事聲明 */
+.gallery-note {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--dialog-box);
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  opacity: 0.75;
+  text-align: justify;
+}
+.gallery-note-title {
+  text-align: center;
+  letter-spacing: 0.2em;
+  margin-bottom: 4px;
 }
 .ending-card.locked .desc {
   color: #6b6862;

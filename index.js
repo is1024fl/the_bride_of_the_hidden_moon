@@ -245,6 +245,7 @@ const screens = ["cover", "intro", "ending", "gallery", "credits"];
 function show(name) {
   screens.forEach((s) => $("sc-" + s).classList.remove("on"));
   $("sc-" + name).classList.add("on");
+  if (name === "cover") $("sc-cover").classList.remove("possessed"); // 回到封面時換回第一張圖
   $("restartBtn").style.display = name === "cover" ? "none" : "flex";
   if (name !== "intro") {
     // 離開遊戲畫面時清掉殘留效果
@@ -387,7 +388,28 @@ function renderGallery() {
 =========================================================================
 */
 $("restartBtn").onclick = () => location.reload();
-$("startBtn").onclick = () => beginGame();
+// 點擊「進入怪談」：封面異變（閃爍、抖動、換成第二張圖、邊緣滲紅），約 1.7 秒後進入遊戲
+let starting = false;
+const COVER_FX_MS = 1700;
+$("startBtn").onclick = () => {
+  if (starting) return; // 動畫期間不重複觸發
+  starting = true;
+
+  // 音樂、音效要在點擊當下播放，才不會被瀏覽器的自動播放限制擋掉
+  if (!userMuted && $("bgm").paused) {
+    $("bgm")
+      .play()
+      .then(updateBgmIcon)
+      .catch(() => {});
+  }
+  playSfx("white_noise", 900);
+
+  $("sc-cover").classList.add("possessed");
+  setTimeout(() => {
+    starting = false;
+    beginGame();
+  }, COVER_FX_MS);
+};
 $("galleryBtn").onclick = () => {
   renderGallery();
   show("gallery");

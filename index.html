@@ -33,7 +33,15 @@
 
         <!-- 初始頁面 -->
         <section class="screen center on" id="sc-cover">
-          <h1 class="cover-title">隱月的新娘</h1>
+          <!-- 點擊「進入怪談」時切換過去的第二張封面圖 -->
+          <div class="cover-alt" aria-hidden="true"></div>
+          <h1 class="cover-title">
+            <img
+              class="cover-logo"
+              src="https://voldosiyprpqirsvlnmx.supabase.co/storage/v1/object/public/img/logo.webp"
+              alt="隱月的新娘"
+            />
+          </h1>
           <button class="btn" id="startBtn">進入怪談</button>
           <button class="btn-ghost" id="galleryBtn" style="margin-top: 18px">
             結局圖鑑
@@ -77,6 +85,12 @@
           >
             返回
           </button>
+          <div class="gallery-note">
+            <p class="gallery-note-title">前導故事聲明</p>
+            <p>
+              本篇內容為小說之前導故事，作為世界觀與劇情鋪陳之用。正式故事內容、角色設定及情節發展，皆以最終出版之書籍文本為準，後續內容仍可能依創作需求進行調整與修訂。
+            </p>
+          </div>
         </section>
 
         <!-- 音樂來源 -->
