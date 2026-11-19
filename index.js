@@ -406,6 +406,7 @@ $("sc-intro").addEventListener("click", (e) => {
   if (e.target.closest(".choices")) return; // 不要吃掉選項按鈕的點擊
   if (typing) {
     skip = true;
+    completeScene(); // 跳過打字的同時，場景也直接到位
     return;
   }
   if (currentNode && currentNode.autoNext && !currentNode.isEnding) {
@@ -498,11 +499,22 @@ effect 欄位是一個陣列，可以混用：
 =========================================================================
 */
 let fxTimers = []; // 這一格排程中的計時器，換格時全部取消
+let sceneTimers = []; // 場景圖逐張淡入的排程（跟著場景走，不跟著節點走）
 let fxSounds = []; // 這一格正在播的音效
 let glitchTimer = null;
 
 function later(fn, ms) {
   fxTimers.push(setTimeout(fn, ms));
+}
+
+// 把場景直接跳到最終畫面：還沒淡入的圖立刻全部顯示，取消剩下的排程
+// 玩家點擊（跳過打字、或前往下一格）時呼叫，避免畫面停在播到一半
+function completeScene() {
+  sceneTimers.forEach(clearTimeout);
+  sceneTimers = [];
+  $("bg-layer")
+    .querySelectorAll(".bg-frame:not(.in):not(.leaving)")
+    .forEach((el) => el.classList.add("in"));
 }
 
 function stopSounds() {
@@ -531,6 +543,8 @@ function resetNodeFx() {
 
 // 清空整個場景（離開遊戲畫面、重新開始時）
 function clearScene() {
+  sceneTimers.forEach(clearTimeout);
+  sceneTimers = [];
   const layer = $("bg-layer");
   layer.innerHTML = "";
   Object.values(SCENE_FX).forEach(({ target, className }) =>
@@ -561,7 +575,8 @@ function addFrame(src, color, opacity, delay) {
   }
   $("bg-layer").appendChild(el);
 
-  const reveal = () => later(() => el.classList.add("in"), delay);
+  const reveal = () =>
+    sceneTimers.push(setTimeout(() => el.classList.add("in"), delay));
   if (src && !el.complete) el.addEventListener("load", reveal, { once: true });
   else reveal();
 }
@@ -571,6 +586,7 @@ function setScene(bgList) {
   // 舊畫面淡出後移除
   Array.from(layer.children).forEach((el) => {
     el.classList.remove("in");
+    el.classList.add("leaving"); // 淡出中的舊圖，completeScene 不要把它叫回來
     setTimeout(() => el.remove(), 900);
   });
 
@@ -633,6 +649,7 @@ function stopGlitch() {
 
 // 套用一格的場景 / 特效 / 音效；回傳給打字機用的進度回呼
 function runNodeFx(effectList, rawText) {
+  completeScene(); // 上一格的場景如果還沒播完，先直接跳到完整畫面
   resetNodeFx();
 
   const list = Array.isArray(effectList) ? effectList : [];
